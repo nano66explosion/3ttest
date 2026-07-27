@@ -1006,7 +1006,7 @@ const PLAN_SEASONS = [
 ];
 const DEFAULT_BASE_ID  = '1CjVuC4zHxfjxJE0YACQk3efqZDbbBT3a';
 const HSUPP_FOLDER_ID  = '1-HR96E9cjorFO9j9navxlQ1MKEVg9_7v';
-const APP_VERSION = '2026-07-08 · b143 (Direction : profil fixe Laurent (BOSS), pas de choix de profil dans les parametres)';
+const APP_VERSION = '2026-07-10 · b144 (fix : la carte Heures du mois se rafraichit au refresh, plus besoin de relancer)';
 
 // ─── #16 PUSH (Firebase Cloud Messaging) ─────────────────────────────────────
 // Config publique du projet Firebase (à coller depuis la console Firebase →
@@ -5580,6 +5580,9 @@ async function refreshData(){
   if(!accessToken){ toast("Reconnecte-toi à Google d'abord.", 'err'); return; }
   btns.forEach(b=>{ b.disabled = true; b.classList.add('spinning'); });
   showBusy(true);
+  // Le refresh doit RECALCULER les heures supp de la carte du mois (sinon la carte
+  // « Heures » garde l'ancien total en cache jusqu'au relancement de l'app).
+  Object.keys(_statsHsuppCache).forEach(k => delete _statsHsuppCache[k]);
   try{
     if(getSavedBaseId()){
       await loadBaseHeuresById(getSavedBaseId(), getSavedBaseName(), getSavedBaseMime());
