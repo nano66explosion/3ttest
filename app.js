@@ -1006,7 +1006,7 @@ const PLAN_SEASONS = [
 ];
 const DEFAULT_BASE_ID  = '1CjVuC4zHxfjxJE0YACQk3efqZDbbBT3a';
 const HSUPP_FOLDER_ID  = '1-HR96E9cjorFO9j9navxlQ1MKEVg9_7v';
-const APP_VERSION = '2026-07-10 · b144 (fix : la carte Heures du mois se rafraichit au refresh, plus besoin de relancer)';
+const APP_VERSION = '2026-07-10 · b145 (detail carte Heures : affiche le total heures supp du mois + total combine)';
 
 // ─── #16 PUSH (Firebase Cloud Messaging) ─────────────────────────────────────
 // Config publique du projet Firebase (à coller depuis la console Firebase →
@@ -5875,6 +5875,9 @@ async function loadStatsHsupp(reg, y, m, baseTotal, nReg, nGuest){
     const v=document.getElementById('stat-h-val'), s=document.getElementById('stat-h-sub');
     if(v) v.textContent = `${Math.round((baseTotal+hs)*100)/100}h`;
     if(s) s.textContent = `${nReg} régie${nReg>1?'s':''}${hs?` · +${hs}h supp`:''}${nGuest?` · ${nGuest} 🎤`:''}`;
+    // Détail (popup) : heures supp + total combiné
+    const sv=document.getElementById('hp-supp-val'); if(sv) sv.textContent = `${hs}h`;
+    const gv=document.getElementById('hp-grand-val'); if(gv) gv.textContent = `${Math.round((baseTotal+hs)*100)/100}h`;
   };
   if(key in _statsHsuppCache){ apply(_statsHsuppCache[key]); return; }
   try{
@@ -5905,6 +5908,21 @@ function heuresPopHTML(h){
     ? `<div class="hp-warn">⚠️ Non trouvés dans la base : ${h.unmatched.join(', ')}</div>` : '';
   const hsuppNote = (h.hsupp && h.hsupp.length)
     ? `<div style="font-size:11px;color:#a78bfa;margin-top:.4rem">💼 Comptés en heures supp : ${h.hsupp.join(', ')}</div>` : '';
+  // Bloc heures supp du mois (déclarées) : lu depuis le cache si dispo, sinon rempli par loadStatsHsupp.
+  let suppBlock = '';
+  if(!offlineMode){
+    const reg = getCurrentReg();
+    const mkSel = document.getElementById('mois-select');
+    if(reg && mkSel && mkSel.value){
+      const [Y,M] = mkSel.value.split('-').map(Number);
+      const cached = _statsHsuppCache[reg+'|'+Y+'-'+M];
+      const suppTxt = (cached==null) ? '…' : `${cached}h`;
+      const grand = (cached==null) ? h.total : Math.round((h.total+cached)*100)/100;
+      suppBlock = `<div class="hp-sep"></div>
+        <div class="hp-row"><span class="hp-l">💼 Heures supp du mois</span><span class="hp-v" id="hp-supp-val" style="color:#a78bfa">${suppTxt}</span></div>
+        <div class="hp-row hp-total"><span class="hp-l">Total avec heures supp</span><span class="hp-v" id="hp-grand-val">${grand}h</span></div>`;
+    }
+  }
   return `<div class="htech-pop" onclick="event.stopPropagation()">
     <button class="hp-close" onclick="closeHeuresPop(event)" aria-label="Fermer" title="Fermer">✕</button>
     <div class="hp-title">Détail des heures · ${h.total}h</div>
@@ -5914,7 +5932,8 @@ function heuresPopHTML(h){
     <div class="hp-row"><span class="hp-l">Durées spectacles</span><span class="hp-v">${h.duree}h</span></div>
     <div class="hp-row"><span class="hp-l">Démontages</span><span class="hp-v">${h.demontage}h</span></div>
     <div class="hp-row"><span class="hp-l">Services (1h/régie)</span><span class="hp-v">${h.service}h</span></div>
-    <div class="hp-row hp-total"><span class="hp-l">Total</span><span class="hp-v">${h.total}h</span></div>
+    <div class="hp-row hp-total"><span class="hp-l">Total heures régie</span><span class="hp-v">${h.total}h</span></div>
+    ${suppBlock}
     ${unm}
     ${warn}
     ${hsuppNote}
